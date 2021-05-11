@@ -5,7 +5,7 @@ import "./interfaces/IERC20.sol";
 import { iL1LiquidityPool } from "./interfaces/iL1LiquidityPool.sol";
 
 /* Library Imports */
-import { OVM_CrossDomainEnabled } from "enyalabs_contracts/build/contracts/libraries/bridge/OVM_CrossDomainEnabled.sol";
+import { OVM_CrossDomainEnabled } from "omgx_contracts/build/contracts/libraries/bridge/OVM_CrossDomainEnabled.sol";
 
 /* External Imports */
 import '@openzeppelin/contracts/math/SafeMath.sol';
