@@ -33,8 +33,8 @@ The stable general purpose testnet is on Rinkeby (ChainID 4) and AWS. To test on
 
 NODE_ENV=local
 L1_NODE_WEB3_URL=https://rinkeby.infura.io/v3/YOUR_INFURA_KEY_HERE
-L2_NODE_WEB3_URL=http://3.85.224.26:8545
-ETH1_ADDRESS_RESOLVER_ADDRESS=0xa32cf2433ba24595d3aCE5cc9A7079d3f1CC5E0c
+L2_NODE_WEB3_URL=https://rinkeby.omgx.network/
+ETH1_ADDRESS_RESOLVER_ADDRESS=0xAe6E7D7Ea17e7daD1cA83F1F1Ed899019f2209Ec
 TEST_PRIVATE_KEY_1=0xPRIVATE KEY OF THE FIRST TEST WALLET
 TEST_PRIVATE_KEY_2=0xPRIVATE KEY OF THE SECOND TEST WALLET
 TARGET_GAS_LIMIT=9000000000
@@ -215,7 +215,7 @@ On the MetaMask side, some set up is needed.
 
 2. You also need to point Metamask at the correct chain. 
   * For work on Rinkeby L1, chose **MetaMask>Networks>Rinkeby Test Network**.
-  * For work on the OMGX Rinkeby L2, chose **MetaMask>Networks>Custom RPC** and enter `http://3.85.224.26:8545` with a ChainID of 28.
+  * For work on the OMGX Rinkeby L2, chose **MetaMask>Networks>Custom RPC** and enter `https://rinkeby.omgx.network/` with a ChainID of 28.
   * For work on a local L1, chose **MetaMask>Networks>Custom RPC** and enter `http://localhost:9545` with a ChainID of 31337.
   * For work on a local OMGX L2, chose **MetaMask>Networks>Custom RPC** and enter `http://localhost:8545` with a ChainID of 28.
 
