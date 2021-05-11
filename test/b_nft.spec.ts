@@ -17,9 +17,8 @@ describe('NFT Test', async () => {
   
   let env: OptimismEnv
 
-  //Test Marc's BioBase NFT system
-  const nftName = 'BioBase'
-  const nftSymbol = 'BEE' //BioEconomy Explodes
+  const nftName = 'TestNFT'
+  const nftSymbol = 'TST'
 
   const getBalances = async (
     _address: string, 
@@ -69,7 +68,7 @@ describe('NFT Test', async () => {
       BigNumber.from(String(0)) //starting index for the tokenIDs
     )
     await L2ERC721.deployTransaction.wait()
-    console.log("Marc's BioBase NFT L2ERC721 deployed to:", L2ERC721.address)
+    console.log("NFT L2ERC721 deployed to:", L2ERC721.address)
     
   })
 

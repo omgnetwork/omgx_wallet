@@ -1,6 +1,6 @@
 {
-  "name": "@enyalabs/wallet",
-  "version": "0.0.10",
+  "name": "@omgnetwork/wallet_react",
+  "version": "0.0.1",
   "private": true,
   "dependencies": {
     "@eth-optimism/watcher": "^0.0.1-alpha.9",
