@@ -297,6 +297,22 @@ class NetworkService {
     };
   }
 
+  async addL2Network() {
+    const nw = getAllNetworks();
+    const chainParam = {
+      chainId: '0x' + nw.rinkeby.L2.chainId.toString(16),
+      chainName: nw.rinkeby.L2.name,
+      rpcUrls: [nw.rinkeby.L2.rpcUrl]
+    }
+
+    this.provider = await web3Modal.connect();
+    this.web3Provider = new Web3Provider(this.provider);
+    this.web3Provider.jsonRpcFetchFunc(
+      'wallet_addEthereumChain',
+      [chainParam, this.account],
+    );
+  }
+
   async getTransactions() {
     //rinkeby L1
     if (this.chainID === 4) {
@@ -342,8 +358,8 @@ class NetworkService {
       if (response.status === 201) {
         const transactions = await response.json();
         const filteredTransactions = transactions.filter(i => 
-          [this.L1LPAddress.toLowerCase(), this.ERC20L2Contract.address, this.l2ETHGatewayAddress]
-          .includes(i.to.toLowerCase())
+          [this.L2LPAddress.toLowerCase(), this.L2DepositedERC20Address.toLowerCase(), this.l2ETHGatewayAddress.toLowerCase()]
+          .includes(i.to.toLowerCase()) && i.crossDomainMessage
         )
         return { exited: filteredTransactions};
       }
