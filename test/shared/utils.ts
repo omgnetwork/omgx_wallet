@@ -1,5 +1,5 @@
-import { injectL2Context } from 'enyalabs_core-utils'
-import { getContractFactory, getContractInterface } from 'enyalabs_contracts'
+import { injectL2Context } from 'omgx_core-utils'
+import { getContractFactory, getContractInterface } from 'omgx_contracts'
 import {
   Contract,
   Wallet,
