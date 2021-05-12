@@ -301,7 +301,7 @@ class NetworkService {
     const nw = getAllNetworks();
     const chainParam = {
       chainId: '0x' + nw.rinkeby.L2.chainId.toString(16),
-      chainName: nw.rinkeby.L2.name,
+      chainName: "OMGX L2",
       rpcUrls: [nw.rinkeby.L2.rpcUrl]
     }
 
