@@ -4,6 +4,7 @@
   * [1. Basic Setup and Configuration](#1-basic-setup-and-configuration)
     + [1.1 Using Rinkeby Testnet](#11-using-rinkeby-testnet)
     + [1.2 Using Local Testnet](#12-using-local-testnet)
+    + [1.3 Common Wallet Setup Problems](#13-common-wallet-setup-problems)
   * [2. Running the Integration Tests](#2-running-the-integration-tests)
   * [3. Wallet Specific Smart Contracts](#3-wallet-specific-smart-contracts)
     + [3.1 L1liquidityPool.sol](#31-l1liquiditypoolsol)
@@ -80,6 +81,12 @@ TARGET_GAS_LIMIT=9000000000
 CHAIN_ID=28
 
 ```
+
+### 1.3 Common Wallet Setup Problems
+
+**Wallet does not show Balances** Did you set the correct ChainIDs in the custom RPC in MetaMask? Please make sure the ChainIDs are correct (Rinkeby = 4, OMGX L2 = 28, local hardhat L1 = 31337).
+
+**I checked that and the wallet still does not show balances** Did you generate a `.env` and provide your `REACT_APP_INFURA_ID` and `REACT_APP_ETHERSCAN_API`? See Section 4.
 
 ## 2. Running the Integration Tests
 
