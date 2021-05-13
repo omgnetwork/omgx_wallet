@@ -31,6 +31,8 @@ import Web3 from 'web3';
 
 import { getToken } from 'actions/tokenAction';
 import { getNFTs, addNFT } from 'actions/nftAction';
+import { setMinter } from 'actions/setupAction';
+
 import { openAlert, openError } from 'actions/uiAction';
 import { WebWalletError } from 'services/errorService';
 
@@ -140,6 +142,28 @@ class NetworkService {
     })
   }
 
+  async mintAndSendNFT(receiverAddress, ownerName, tokenURI) {
+    
+    try {
+      let meta = ownerName + "#" + Date.now().toString() + "#" + tokenURI;
+      
+      console.log("meta:",meta)
+      console.log("receiverAddress:",receiverAddress)
+
+      let nft = await this.ERC721Contract.mintNFT(
+        receiverAddress,
+        meta
+      )
+      
+      await nft.wait()
+      console.log("New ERC721:",nft)
+      return true;
+    }
+    catch (error) {
+      return false;
+    }
+  }
+
   async initializeAccounts ( networkName ) {
     
     console.log("NS: initializeAccounts() for",networkName)
@@ -157,9 +181,9 @@ class NetworkService {
 
       this.chainID = network.chainId;
       this.networkName = networkName;
-      //console.log("NS: networkName:",this.networkName)
+      console.log("NS: networkName:",this.networkName)
       //console.log("NS: account:",this.account)
-      //console.log("NS: network:",network)
+      console.log("NS: this.chainID:",this.chainID)
 
       //there are numerous possible chains we could be on
       //either local, rinkeby etc
@@ -262,6 +286,15 @@ class NetworkService {
         this.web3Provider.getSigner(),
       );
 
+      const ERC721Owner = await this.ERC721Contract.owner()
+
+      if(this.account === ERC721Owner) {
+        //console.log("Great, you are the NFT owner")
+        setMinter( true )
+      } else {
+        //console.log("Sorry, not the NFT owner")
+        setMinter( false )
+      }
       //Fire up the new watcher
       //const addressManager = getAddressManager(bobl1Wallet)
       //const watcher = await initWatcher(l1Provider, this.l2Provider, addressManager)
@@ -376,11 +409,8 @@ class NetworkService {
       const childChainBalance = await this.l2Provider.getBalance(this.account);
       const ERC20L2Balance = await this.ERC20L2Contract.methods.balanceOf(this.account).call({from: this.account});
 
-      //const ERC721L2Balance = 0; //await this.ERC721Contract.balanceOf(this.account);
-
       // //how many NFTs do I own?
       const ERC721L2Balance = await this.ERC721Contract.balanceOf(this.account)
-
       //console.log("ERC721L2Balance",ERC721L2Balance)
       //console.log("this.account",this.account)
       //console.log(this.ERC721Contract)
@@ -388,10 +418,6 @@ class NetworkService {
       //let see if we already know about them
       const myNFTS = await getNFTs()
       const numberOfNFTS = Object.keys(myNFTS).length;
-      //console.log(myNFTS)
-
-      //console.log(ERC721L2Balance.toString())
-      //console.log(numberOfNFTS.toString())
 
       if(ERC721L2Balance.toNumber() !== numberOfNFTS) {
 
@@ -936,3 +962,14 @@ class NetworkService {
 
 const networkService = new NetworkService();
 export default networkService;
+
+
+
+
+
+
+
+
+
+
+
