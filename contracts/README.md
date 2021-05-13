@@ -4,13 +4,13 @@ The original contract is [here](https://github.com/confio/eth-atomic-swap/blob/m
 
 ## open function
 
-The open function is used to create the record for both sides.  `_secretLock` and `_timelock` are removed in the new contract. `_secreteLock` is used to verify the `_secretKey`  in the close function.
+The open function is used to create an agreement for both sides.  `_secretLock` and `_timelock` are removed in the new contract. `_secreteLock` is used to verify the `_secretKey`  in the close function.
 
 ```javascript
 require(swaps[_swapID].secretLock == sha256(_secretKey));
 ```
 
-Using the secrete key means that we haveto add another step in our system, so the `onlyCloseTrader` modifier is added to replace the `_secreteKey`. 
+Using the secrete key means that we have to add another step in our system, so the `onlyCloseTrader` modifier is added to replace the `_secreteKey`. 
 
 ```
 modifier onlyCloseTrader(bytes32 _swapID) {
@@ -19,8 +19,6 @@ modifier onlyCloseTrader(bytes32 _swapID) {
     _;
 }
 ```
-
-Only the close trader allows to close the swap.
 
 `_timelock` prevents people from expiring the swap before a certain time. It's not useful for the Varna, so it's removed.
 
