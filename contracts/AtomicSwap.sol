@@ -38,7 +38,30 @@ contract AtomicSwap {
         _;
     }
 
-    function open(bytes32 _swapID, uint256 _openValue, address _openContractAddress, uint256 _closeValue, address _closeTrader, address _closeContractAddress) public onlyInvalidSwaps(_swapID) {
+    modifier onlyCloseTrader(bytes32 _swapID) {
+        Swap memory swap = swaps[_swapID];
+        require(msg.sender == swap.closeTrader);
+        _;
+    }
+
+    modifier onlyTraders(bytes _swapID) {
+        Swap memory swap = swaps[_swapID];
+        require(msg.sender == swap.openTrader || msg.sender == swap.closeTrader);
+        _;
+    }
+
+    function open(
+        bytes32 _swapID, 
+        uint256 _openValue, 
+        address _openContractAddress, 
+        uint256 _closeValue, 
+        address _closeTrader, 
+        address _closeContractAddress
+    ) 
+        public 
+        onlyInvalidSwaps(_swapID) 
+    {   
+        require(swapStates[_swapID] == States.INVALID);
         // Store the details of the swap.
         Swap memory swap = Swap({
             openValue: _openValue,
@@ -51,10 +74,16 @@ contract AtomicSwap {
         swaps[_swapID] = swap;
         swapStates[_swapID] = States.OPEN;
 
-        Open(_swapID, _closeTrader);
+        emit Open(_swapID, _closeTrader);
     }
 
-    function close(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
+    function close(
+        bytes32 _swapID
+    ) 
+        public 
+        onlyOpenSwaps(_swapID) 
+        onlyCloseTrader(_swapID) 
+    {
         Swap memory swap = swaps[_swapID];
 
         // both parties have enough tokens
@@ -72,18 +101,43 @@ contract AtomicSwap {
         require(openERC20Contract.transferFrom(swap.openTrader, swap.closeTrader, swap.openValue));
 
         swapStates[_swapID] = States.CLOSED;
-        Close(_swapID);
+
+        emit Close(_swapID);
     }
 
-    function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
+    function expire(
+        bytes32 _swapID
+    ) 
+        public 
+        onlyOpenSwaps(_swapID) 
+        onlyTraders(_swapID)
+    {
         // Expire the swap.
         swapStates[_swapID] = States.EXPIRED;
 
-        Expire(_swapID);
+        emit Expire(_swapID);
     }
 
-    function check(bytes32 _swapID) public view returns (uint256 openValue, address openContractAddress, uint256 closeValue, address closeTrader, address closeContractAddress) {
+    function check(
+        bytes32 _swapID
+    ) 
+        public 
+        view 
+        returns (
+            uint256 openValue, 
+            address openContractAddress, 
+            uint256 closeValue, 
+            address closeTrader, 
+            address closeContractAddress
+        ) 
+    {
         Swap memory swap = swaps[_swapID];
-        return (swap.openValue, swap.openContractAddress, swap.closeValue, swap.closeTrader, swap.closeContractAddress);
+        return (
+            swap.openValue, 
+            swap.openContractAddress, 
+            swap.closeValue, 
+            swap.closeTrader, 
+            swap.closeContractAddress
+        );
     }
 }
