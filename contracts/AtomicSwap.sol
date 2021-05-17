@@ -44,7 +44,7 @@ contract AtomicSwap {
         _;
     }
 
-    modifier onlyTraders(bytes _swapID) {
+    modifier onlyTraders(bytes32 _swapID) {
         Swap memory swap = swaps[_swapID];
         require(msg.sender == swap.openTrader || msg.sender == swap.closeTrader);
         _;

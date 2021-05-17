@@ -14,7 +14,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
 
-import { OmgUtil } from '@omisego/omg-js';
 import { JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import { hexlify } from "@ethersproject/bytes";
 import { parseUnits, parseEther } from "@ethersproject/units";
@@ -42,6 +41,8 @@ import L1ERC20Json from '../deployment/artifacts/contracts/ERC20.sol/ERC20.json'
 import L2DepositedERC20Json from '../deployment/artifacts-ovm/contracts/L2DepositedERC20.sol/L2DepositedERC20.json'
 import L1ERC20GatewayJson from '../deployment/artifacts/contracts/L1ERC20Gateway.sol/L1ERC20Gateway.json'
 import ERC721Json from '../deployment/artifacts-ovm/contracts/ERC721Mock.sol/ERC721Mock.json'
+import L2TokenPoolJson from '../deployment/artifacts-ovm/contracts/TokenPool.sol/TokenPool.json'
+import AtomicSwapJson from '../deployment/artifacts-ovm/contracts/AtomicSwap.sol/AtomicSwap.json'
 
 import { powAmount, logAmount } from 'util/amountConvert';
 import { getAllNetworks } from 'util/networkName';
@@ -72,7 +73,6 @@ class NetworkService {
     this.l2Provider = null;
 
     this.provider = null;
-    this.OmgUtil = OmgUtil;
     this.environment = null;
     
     this.L1ETHGatewayContract = null;
@@ -86,6 +86,9 @@ class NetworkService {
     this.ERC20L2Contract = null;
 
     this.ERC721Contract = null;
+
+    this.L2TokenPoolContract = null;
+    this.AtomicSwapContract = null;
 
     // L1 or L2
     this.L1orL2 = null;
@@ -231,6 +234,8 @@ class NetworkService {
       this.L1LPAddress = addresses.L1LiquidityPool;
       this.L2LPAddress = addresses.L2LiquidityPool;
       this.ERC721Address = addresses.L2ERC721;
+      this.L2TokenPoolAddress = addresses.L2TokenPool;
+      this.AtomicSwapAddress = addresses.AtomicSwap;
 
       this.L1ETHGatewayContract = new ethers.Contract(
         this.l1ETHGatewayAddress, 
@@ -286,8 +291,27 @@ class NetworkService {
         this.web3Provider.getSigner(),
       );
 
-      const ERC721Owner = await this.ERC721Contract.owner()
+      this.L2TokenPoolContract = new ethers.Contract(
+        this.L2TokenPoolAddress,
+        L2TokenPoolJson.abi,
+        this.web3Provider.getSigner(),
+      );
 
+      this.L2TokenPoolContract = new ethers.Contract(
+        this.L2TokenPoolAddress,
+        L2TokenPoolJson.abi,
+        this.web3Provider.getSigner(),
+      );
+
+      this.AtomicSwapContract = new ethers.Contract(
+        this.AtomicSwapAddress,
+        AtomicSwapJson.abi,
+        this.web3Provider.getSigner(),
+      )
+
+      // const ERC721Owner = await this.ERC721Contract.owner()
+      const ERC721Owner = '0x00000000000000000000000000000';
+      
       if(this.account === ERC721Owner) {
         //console.log("Great, you are the NFT owner")
         setMinter( true )
@@ -315,7 +339,7 @@ class NetworkService {
       return 'enabled'
 
     } catch (error) {
-
+      console.log(error);
       return false;
     
     }
@@ -392,7 +416,7 @@ class NetworkService {
         const transactions = await response.json();
         const filteredTransactions = transactions.filter(i => 
           [this.L2LPAddress.toLowerCase(), this.L2DepositedERC20Address.toLowerCase(), this.l2ETHGatewayAddress.toLowerCase()]
-          .includes(i.to.toLowerCase()) && i.crossDomainMessage
+          .includes(i.to ? i.to.toLowerCase(): null) && i.crossDomainMessage
         )
         return { exited: filteredTransactions};
       }
@@ -461,7 +485,7 @@ class NetworkService {
         //all set - do nothing
       }
 
-      const ethToken = await getToken(OmgUtil.transaction.ETH_CURRENCY);
+      const ethToken = await getToken("0x0000000000000000000000000000000000000000");
       let testToken = null;
       
       //For testing - we always provide a test token
@@ -587,7 +611,6 @@ class NetworkService {
   }
 
   confirmLayer = (layerToConfirm) => async (dispatch) =>{
-    
     if(layerToConfirm === this.L1orL2 ) {
       return true
     } else {
@@ -957,6 +980,16 @@ class NetworkService {
     // Demo purpose
     const decimals = 18;
     return logAmount(balance.toString(), decimals);
+  }
+
+  async getTestToken() {
+    try {
+      const getTokenTX = await this.L2TokenPoolContract.requestToken();
+      await getTokenTX.wait();
+      return true;
+    }catch {
+      return false;
+    }
   }
 }
 
