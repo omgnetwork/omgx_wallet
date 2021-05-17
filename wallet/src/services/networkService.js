@@ -309,8 +309,7 @@ class NetworkService {
         this.web3Provider.getSigner(),
       )
 
-      // const ERC721Owner = await this.ERC721Contract.owner()
-      const ERC721Owner = '0x00000000000000000000000000000';
+      const ERC721Owner = await this.ERC721Contract.owner()
       
       if(this.account === ERC721Owner) {
         //console.log("Great, you are the NFT owner")
