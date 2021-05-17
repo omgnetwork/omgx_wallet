@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >0.5.0;
 
-import "./ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol"
 
 contract AtomicSwap {
 
@@ -61,9 +61,8 @@ contract AtomicSwap {
         public 
         onlyInvalidSwaps(_swapID) 
     {   
-        require(swapStates[_swapID] == States.INVALID);
         // Store the details of the swap.
-        Swap memory swap = Swap({
+        swaps[_swapID] = Swap({
             openValue: _openValue,
             openTrader: msg.sender,
             openContractAddress: _openContractAddress,
@@ -71,7 +70,6 @@ contract AtomicSwap {
             closeTrader: _closeTrader,
             closeContractAddress: _closeContractAddress
         });
-        swaps[_swapID] = swap;
         swapStates[_swapID] = States.OPEN;
 
         emit Open(_swapID, _closeTrader);
@@ -87,18 +85,14 @@ contract AtomicSwap {
         Swap memory swap = swaps[_swapID];
 
         // both parties have enough tokens
-        ERC20 openERC20Contract = ERC20(swap.openContractAddress);
-        ERC20 closeERC20Contract = ERC20(swap.closeContractAddress);
-        require(swap.openValue <= openERC20Contract.allowance(swap.openTrader, address(this)));
-        require(swap.openValue <= openERC20Contract.balanceOf(swap.openTrader));
-        require(swap.closeValue <= closeERC20Contract.allowance(swap.closeTrader, address(this)));
-        require(swap.closeValue <= closeERC20Contract.balanceOf(swap.closeTrader));
+        SafeERC20 openERC20Contract = SafeERC20(swap.openContractAddress);
+        SafeERC20 closeERC20Contract = SafeERC20(swap.closeContractAddress);
 
         // Transfer the closing funds from the closing trader to the opening trader.
-        require(closeERC20Contract.transferFrom(swap.closeTrader, swap.openTrader, swap.closeValue));
+        require(closeERC20Contract.safeTransferFrom(swap.closeTrader, swap.openTrader, swap.closeValue));
 
         // Transfer the opening funds from opening trader to the closing trader.
-        require(openERC20Contract.transferFrom(swap.openTrader, swap.closeTrader, swap.openValue));
+        require(openERC20Contract.safeTransferFrom(swap.openTrader, swap.closeTrader, swap.openValue));
 
         swapStates[_swapID] = States.CLOSED;
 
