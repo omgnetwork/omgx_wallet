@@ -18,6 +18,7 @@ import { useDispatch, useSelector, batch } from 'react-redux';
 import { selectWalletMethod } from 'selectors/setupSelector';
 import { selectModalState } from 'selectors/uiSelector';
 // import { selectChildchainTransactions } from 'selectors/transactionSelector';
+import { selectLogin } from 'selectors/loginSelector';
 
 import useInterval from 'util/useInterval';
 // import { isEqual } from 'lodash';
@@ -35,11 +36,14 @@ import {
 
 import { checkVersion } from 'actions/serviceAction';
 
+import { openError } from 'actions/uiAction';
+
 import DepositModal from 'containers/modals/deposit/DepositModal';
 import TransferModal from 'containers/modals/transfer/TransferModal';
 import ExitModal from 'containers/modals/exit/ExitModal';
 import LedgerConnect from 'containers/modals/ledger/LedgerConnect';
 import AddTokenModal from 'containers/modals/addtoken/AddTokenModal';
+import ConfirmationModal from 'containers/modals/confirmation/ConfirmationModal';
 
 //Wallet Functions
 import Status from 'containers/status/Status';
@@ -50,6 +54,13 @@ import Transactions from 'containers/transactions/Transactions';
 import NFT from 'containers/nft/Nft';
 import MobileHeader from 'components/mobileheader/MobileHeader';
 import MobileMenu from 'components/mobilemenu/MobileMenu';
+
+//Varna
+import Login from 'containers/login/Login';
+import Seller from 'containers/seller/Seller';
+import Buyer from 'containers/buyer/Buyer';
+
+import networkService from 'services/networkService';
 
 import logo from 'images/omgx.png';
 
@@ -72,8 +83,10 @@ function Home () {
   const exitModalState = useSelector(selectModalState('exitModal'))
   const addTokenModalState = useSelector(selectModalState('addNewTokenModal'))
   const ledgerConnectModalState = useSelector(selectModalState('ledgerConnectModal'))
+  const confirmationModalState = useSelector(selectModalState('confirmationModal'))
 
   const walletMethod = useSelector(selectWalletMethod())
+  const loggedIn = useSelector(selectLogin());
   // const transactions = useSelector(selectChildchainTransactions, isEqual);
   
   useEffect(() => {
@@ -113,7 +126,22 @@ function Home () {
     checkVersion()
   }, [])
 
+  useEffect(() => {
+    if (!loggedIn) {
+      setPageDisplay("AccountNow");
+    } else {
+      setPageDisplay("VarnaSell");
+    }
+  },[loggedIn]);
+  
   const handleSetPage = async (page) => {
+    if (page === 'VarnaLogin') {
+      const networkStatus = networkService.L1orL2 === 'L2';
+      if (!networkStatus) {
+        dispatch(openError('Wrong network! Please switch to L2 network to use Varna.'));
+        return
+      }
+    }
     setPageDisplay(page);
   }
 
@@ -124,6 +152,7 @@ function Home () {
       <TransferModal open={transferModalState} />
       <ExitModal open={exitModalState} fast={fast}/>
       <AddTokenModal open={addTokenModalState} />
+      <ConfirmationModal open={confirmationModalState} />
 
       <LedgerConnect
         open={walletMethod === 'browser'
@@ -161,6 +190,29 @@ function Home () {
             >  
               NFT
             </h2>
+            {!loggedIn ?
+              <h2
+                className={pageDisplay === "VarnaLogin" ? styles.subtitletextActive : styles.subtitletext}
+                onClick={()=>{handleSetPage("VarnaLogin")}}
+              >  
+                Login
+              </h2>:
+              <>
+                <h2 
+                  className={pageDisplay === "VarnaBuy" ? styles.subtitletextActive : styles.subtitletext}
+                  onClick={()=>{handleSetPage("VarnaBuy")}}
+                  style={{position: 'relative'}}
+                >  
+                  Buy
+                </h2>
+                <h2
+                  className={pageDisplay === "VarnaSell" ? styles.subtitletextActive : styles.subtitletext}
+                  onClick={()=>{handleSetPage("VarnaSell")}}
+                >  
+                  Sell
+                </h2>
+              </>
+            }
           </div>
           {pageDisplay === "AccountNow" &&
           <>  
@@ -170,6 +222,15 @@ function Home () {
           }
           {pageDisplay === "NFT" &&
             <NFT/>
+          }
+          {pageDisplay === "VarnaLogin" &&
+            <Login/>
+          }
+          {pageDisplay === "VarnaSell" &&
+            <Seller/>
+          }
+          {pageDisplay === "VarnaBuy" &&
+            <Buyer/>
           }
         </div>
       </div>

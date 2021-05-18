@@ -12,7 +12,7 @@ import { depositETHL2, depositL1LP } from 'actions/networkAction';
 
 import * as styles from '../DepositModal.module.scss';
 
-const ETH0x = networkService.OmgUtil.transaction.ETH_CURRENCY;
+const ETH0x = "0x0000000000000000000000000000000000000000";
 
 function InputStep ({
   onClose,

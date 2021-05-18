@@ -4,11 +4,14 @@ import { Direction } from './shared/watcher-utils'
 
 import L1ERC20Json from '../artifacts/contracts/ERC20.sol/ERC20.json'
 import L1ERC20GatewayJson from '../artifacts/contracts/L1ERC20Gateway.sol/L1ERC20Gateway.json'
-
 import L2DepositedERC20Json from '../artifacts-ovm/contracts/L2DepositedERC20.sol/L2DepositedERC20.json'
 
 import L1LiquidityPoolJson from '../artifacts/contracts/L1LiquidityPool.sol/L1LiquidityPool.json'
 import L2LiquidityPoolJson from '../artifacts-ovm/contracts/L2LiquidityPool.sol/L2LiquidityPool.json'
+
+import L2TokenPoolJson from '../artifacts-ovm/contracts/TokenPool.sol/TokenPool.json'
+
+import AtomicSwapJson from '../artifacts-ovm/contracts/AtomicSwap.sol/AtomicSwap.json';
 
 import { OptimismEnv } from './shared/env'
 
@@ -21,13 +24,17 @@ describe('System setup', async () => {
   let Factory__L1ERC20: ContractFactory
   let Factory__L2DepositedERC20: ContractFactory
   let Factory__L1ERC20Gateway: ContractFactory
+  let Factory__L2TokenPool: ContractFactory
+  let Factory__AtomicSwap: ContractFactory
 
   let L1LiquidityPool: Contract
   let L2LiquidityPool: Contract
   let L1ERC20: Contract
   let L2DepositedERC20: Contract
   let L1ERC20Gateway: Contract
-  
+  let L2TokenPool: Contract
+  let AtomicSwap: Contract
+
   let env: OptimismEnv
 
   //Test ERC20 
@@ -106,6 +113,17 @@ describe('System setup', async () => {
       env.bobl1Wallet
     )
 
+    Factory__L2TokenPool = new ContractFactory(
+      L2TokenPoolJson.abi,
+      L2TokenPoolJson.bytecode,
+      env.bobl1Wallet
+    )
+
+    Factory__AtomicSwap = new ContractFactory(
+      AtomicSwapJson.abi,
+      AtomicSwapJson.bytecode,
+      env.bobl1Wallet
+    )
   })
 
   before(async () => {
@@ -162,6 +180,16 @@ describe('System setup', async () => {
     )
     await L1ERC20Gateway.deployTransaction.wait()
     console.log("L1ERC20Gateway deployed to:", L1ERC20Gateway.address)
+    
+    //Deploy L2 token pool for the new token
+    L2TokenPool = await Factory__L2TokenPool.deploy()
+    await L2TokenPool.deployTransaction.wait()
+    console.log("L2TokenPool deployed to:", L2TokenPool.address)
+    
+    // Deploy atomic swap
+    AtomicSwap = await Factory__AtomicSwap.deploy()
+    await AtomicSwap.deployTransaction.wait()
+    console.log("AtomicSwap deployed to:", AtomicSwap.address)
 
     //Initialize the contracts for the new token
     const initL2 = await L2DepositedERC20.init(L1ERC20Gateway.address);
@@ -172,6 +200,8 @@ describe('System setup', async () => {
     await L1LiquidityPool.registerTokenAddress(L1ERC20.address, L2DepositedERC20.address);
     await L2LiquidityPool.registerTokenAddress(L1ERC20.address, L2DepositedERC20.address);
     
+    //Register ERC20 token address in L2 token pool
+    await L2TokenPool.registerTokenAddress(L2DepositedERC20.address);
   })
 
   before(async () => {
@@ -185,7 +215,9 @@ describe('System setup', async () => {
       L2DepositedERC20: L2DepositedERC20.address,
       L1ERC20Gateway: L1ERC20Gateway.address,
       l1ETHGatewayAddress: env.L1ETHGateway.address,
-      l1MessengerAddress: env.l1MessengerAddress
+      l1MessengerAddress: env.l1MessengerAddress,
+      L2TokenPool: L2TokenPool.address,
+      AtomicSwap: AtomicSwap.address,
     }
 
     console.log(JSON.stringify(addresses, null, 2))
@@ -335,8 +367,9 @@ describe('System setup', async () => {
     
     const depositL2oWETHAmount = utils.parseEther("5.1")
     const addoWETHAmount = utils.parseEther("5")
-    const depositL2ERC20Amount = utils.parseEther("510")
+    const depositL2ERC20Amount = utils.parseEther("200510")
     const addERC20Amount = utils.parseEther("500")
+    const addL2TPAmount = utils.parseEther("200000")
 
     // Add ETH
     const preL2LPEthBalance = await env.L2ETHGateway.balanceOf(L2LiquidityPool.address)
@@ -390,10 +423,25 @@ describe('System setup', async () => {
     await depositERC20TX.wait()
 
     const postL2LPERC20Balance = await L2DepositedERC20.balanceOf(L2LiquidityPool.address)
+    
+    const approveL2TPTX = await L2DepositedERC20.approve(
+      L2TokenPool.address,
+      addL2TPAmount,
+    )
+    await approveL2TPTX.wait()
+
+    const transferL2TPTX = await L2DepositedERC20.transfer(
+      L2TokenPool.address,
+      addL2TPAmount,
+    );
+    await transferL2TPTX.wait()
+
+    const L2TPBalance = await L2DepositedERC20.balanceOf(L2TokenPool.address)
 
     expect(postL2LPERC20Balance).to.deep.eq(
       preL2LPERC20Balance.add(addERC20Amount)
     )
+    expect(L2TPBalance).to.deep.eq(addL2TPAmount)
   })
 
   it('should move ETH from L1 LP to L2', async () => {
