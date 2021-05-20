@@ -11,31 +11,18 @@ interface iL1LiquidityPool {
      *       Events     *
      ********************/
 
-    event ownerAddERC20Liquidity_EVENT(
-        address sender,
-        uint256 amount,
-        address erc20ContractAddress
-    );
-
-    event ownerRecoverFee_EVENT(
-        address sender,
-        address receiver,
-        address erc20ContractAddress,
-        uint256 amount
-    );
-
     event clientDepositL1_EVENT(
         address sender,
         uint256 amount,
-        uint256 fee,
-        address erc20ContractL1Address,
-        address erc20ContractL2Address
+        address l1TokenAddress,
+        address l2TokenAddress
     );
 
     event clientPayL1_EVENT(
         address sender,
         uint256 amount,
-        address erc20ContractAddress
+        address l1TokenAddress,
+        address l2TokenAddress
     );
 
     /*************************
@@ -45,7 +32,7 @@ interface iL1LiquidityPool {
     function clientPayL1(
         address payable _to,
         uint256 _amount,
-        address _erc20ContractAddress
+        address _tokenAddress
     )
         external;
 }
