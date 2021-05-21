@@ -30,7 +30,7 @@ The L1 liquidity pool is the sub pool. Swap users can do fast onramp. When swap 
 
   | Total Rewards | Reward Per Share | Total Deposit Amount |
   | ------------- | ---------------- | -------------------- |
-  | 0             | 0                | 100                  |
+  | 10            | 0                | 100                  |
 
 * B deposit 100
 
