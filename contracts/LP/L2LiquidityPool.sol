@@ -30,39 +30,46 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     struct UserInfo {
         uint256 amount; // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
+        uint256 pendingReward; // Pending reward
         //
         // We do some fancy math here. Basically, any point in time, the amount of rewards
         // entitled to a user but is pending to be distributed is:
         //   
-        //   Per Share:    
-        //   totalProviderDeposit = (L1Balance + L2Balance) - (pool.accUserReward + pool.accOwnerReward)
-        //   userRewardPerShare = pool.accUserReward / totalProviderDeposit
-        //   
-        //   Updated reward:
-        //   reward = user.amount * userRewardPerShare
-        //     
-        //   if (reward => user.rewardDebt): pending reward = (user.amount * userRewardPerShare) - user.rewardDebt
-        //   Case reward < user.rewardDebet
-        //   /**********************
-        //   A deposit 100 and get 10 reward
-        //   B deposit 10, rewardDebet = 10 * (10 /(110 - 10)) = 1
-        //   A withdraw the funds, the pool only has 10
-        //   B withdraw the funds userRewardPerShare = 0 / (10) = 0, reward = 0 * 10 = 0, reward < user.rewarDebet (1)
-        //   ************************/
-        //   else: pending reward = 0
+        //   Update Reward Per Share:    
+        //   accUserRewardPerShare = accUserRewardPerShare + (accUserReward - lastAccUserReward) / userDepositAmount
         //
-        // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accRewardPerShare` gets updated.
-        //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
-        //   4. User's `rewardDebt` gets updated.
+        //  LP Provider:
+        //      Deposit:
+        //          Case 1 (new user):
+        //              Update Reward Per Share();
+        //              Transfer half of funds to L1;
+        //              Calculate user.rewardDebt = amount * accUserRewardPerShare;
+        //          Case 2 (user who has already deposited add more funds):
+        //              Update Reward Per Share();
+        //              Calculate user.pendingReward = amount * accUserRewardPerShare - user.rewardDebt;
+        //              Calculate user.rewardDebt = (amount + new_amount) * accUserRewardPerShare;
+        //
+        //      Withdraw
+        //          Update Reward Per Share();
+        //          Calculate user.pendingReward = amount * accUserRewardPerShare - user.rewardDebt;
+        //          Calculate user.rewardDebt = (amount - withdraw_amount) * accUserRewardPerShare;
     }
     // Info of each pool.
     struct PoolInfo {
         address l1TokenAddress; // Address of token contract.
         address l2TokenAddress; // Address of toekn contract.
+
+        // balance
+        uint256 userDepositAmount; // user deposit amount;
         uint256 L1Balance; // L1 token balance.
+
+        // user rewards
+        uint256 lastUserRewardBlock; // Last block number that SUSHIs distribution occurs.
+        uint256 lastAccUserReward; // Last accumulated user reward
         uint256 accUserReward; // Accumulated user reward.
+        uint256 accUserRewardPerShare; // Accumulated user rewards per share, times 1e12. See below.
+
+        // owner rewards
         uint256 accOwnerReward; // Accumulated owner reward.
     }
 
@@ -131,9 +138,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     event withdrawLiqudiity_EVENT(
         address sender,
         address receiver,
-        uint256 pendingAmount,
-        uint256 requestAmount,
-        uint256 withdrawAmount,
+        uint256 amount,
         address tokenAddress
     );
 
@@ -199,8 +204,12 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
             PoolInfo({
                 l1TokenAddress: _l1TokenAddress,
                 l2TokenAddress: _l2TokenAddress,
+                userDepositAmount: 0,
                 L1Balance: 0,
+                lastUserRewardBlock: block.number,
+                lastAccUserReward: 0,
                 accUserReward: 0,
+                accUserRewardPerShare: 0,
                 accOwnerReward: 0
             });
     } 
@@ -293,27 +302,25 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     }
 
     /**
-     * Gets the user reward per share
+     * Update user reward per share
      * @param _tokenAddress Address of ERC20.
-     * @return user reward per share
      */
-    function getUserRewardPerShare(
+    function updateUserRewardPerShare(
         address _tokenAddress
-    )   
+    ) 
         public
-        view
-        returns (
-            uint256
-        )
     {
         PoolInfo storage pool = poolInfo[_tokenAddress];
-        uint256 userRewardPerShare = 0;
-        uint256 totalBalance = IERC20(_tokenAddress).balanceOf(address(this)).add(pool.L1Balance);
-        if (totalBalance >= pool.accOwnerReward.add(pool.accUserReward)) {
-            uint256 userTotalDeposit = totalBalance.sub(pool.accOwnerReward).sub(pool.accUserReward);
-            userRewardPerShare = pool.accUserReward.mul(1e12).div(userTotalDeposit);
+        if (pool.lastUserRewardBlock < block.number &&  pool.lastAccUserReward < pool.accUserReward) {
+            uint256 accUserRewardDiff = (pool.accUserReward.sub(pool.lastAccUserReward));
+            if (pool.userDepositAmount != 0) {
+                pool.accUserRewardPerShare = pool.accUserRewardPerShare.add(
+                    accUserRewardDiff.mul(1e12).div(pool.userDepositAmount)
+                );
+            }
+            pool.lastUserRewardBlock = block.number;
+            pool.lastAccUserReward = pool.accUserReward;
         }
-        return userRewardPerShare;
     }
 
     /**
@@ -332,32 +339,30 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         
         require(pool.l2TokenAddress != address(0), "Token Address Not Register");
         
-        uint256 userRewardPerShare;
-        // if the user has already deposited token, we send rewards first.
-        if (user.amount > 0) {
-            userRewardPerShare = getUserRewardPerShare(_tokenAddress);
-            uint256 pendingAmount = 0;
-            uint256 updatedRewardShare = user.amount.mul(userRewardPerShare).div(1e12);
-            if (updatedRewardShare > user.rewardDebt) {
-                pendingAmount = updatedRewardShare.sub(user.rewardDebt);
-            }
+        // Update accUserRewardPerShare 
+        updateUserRewardPerShare(_tokenAddress);
 
-            if (pendingAmount != 0) {
-                IERC20(_tokenAddress).safeTransferFrom(address(this), msg.sender, pendingAmount);
-            }
+        // if the user has already deposited token, we move the rewards to
+        // pendingReward and update the reward debet.
+        if (user.amount > 0) {
+            user.pendingReward = user.pendingReward.add(
+                user.amount.mul(pool.accUserRewardPerShare).div(1e12).sub(user.rewardDebt)
+            );
+            user.rewardDebt = user.amount.mul(pool.accUserRewardPerShare).div(1e12);
+        } else {
+            user.rewardDebt = _amount.mul(pool.accUserRewardPerShare).div(1e12);
         }
 
+        // transfer funds
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
-        user.amount = user.amount.add(_amount);
-
-        userRewardPerShare = getUserRewardPerShare(_tokenAddress);
-        user.rewardDebt = user.amount.mul(userRewardPerShare).div(1e12);
-        
         // Transfer 1/2 funds to L1
         uint256 transferAmount = _amount.mul(1).div(2);
         // needs to allow L2 pool to transfer funds immediately
         OVM_L2DepositedERC20(_tokenAddress).withdraw(transferAmount);
         
+        // update amounts
+        user.amount = user.amount.add(_amount);
+        pool.userDepositAmount = pool.userDepositAmount.add(_amount);
         pool.L1Balance = pool.L1Balance.add(transferAmount);
 
         emit addLiquidity_EVENT(
@@ -441,32 +446,27 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         require(pool.l2TokenAddress != address(0), "Token Address Not Register");
         require(user.amount >= _amount, "Withdraw Error");
 
-        uint256 userRewardPerShare = getUserRewardPerShare(_tokenAddress);
-        uint256 pendingAmount = 0;
-        uint256 updatedRewardShare = user.amount.mul(userRewardPerShare).div(1e12);
-        if (updatedRewardShare > user.rewardDebt) {
-            pendingAmount = updatedRewardShare.sub(user.rewardDebt);
-        }
-        uint256 withdrawAmount = pendingAmount.add(_amount);
+        // Update accUserRewardPerShare 
+        updateUserRewardPerShare(_tokenAddress);
 
+        // calculate all the rewards and set it as pending rewards
+        user.pendingReward = user.pendingReward.add(
+            user.amount.mul(pool.accUserRewardPerShare).div(1e12).sub(user.rewardDebt)
+        );
         // Update the user data
         user.amount = user.amount.sub(_amount);
-        // Update the pool data
-        pool.accUserReward = pool.accUserReward.sub(pendingAmount);
-        // calculate the new reward debt
-        userRewardPerShare = getUserRewardPerShare(_tokenAddress);
-        user.rewardDebt = user.amount.mul(userRewardPerShare).div(1e12);
-
-        require(withdrawAmount <= IERC20(_tokenAddress).balanceOf(address(this)), "Not enough liquidity on the pool to withdraw");
-
-        IERC20(_tokenAddress).safeTransferFrom(address(this), _to, withdrawAmount);
+        // update reward debt
+        user.rewardDebt = user.amount.mul(pool.accUserRewardPerShare).div(1e12);
+        // update total user deposit amount
+        pool.userDepositAmount = pool.userDepositAmount.sub(_amount);
+        
+        require(_amount <= IERC20(_tokenAddress).balanceOf(address(this)), "Not enough liquidity on the pool to withdraw");
+        IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
 
         emit withdrawLiqudiity_EVENT(
             msg.sender,
             _to,
-            pendingAmount,
             _amount,
-            withdrawAmount,
             _tokenAddress
         );
     }

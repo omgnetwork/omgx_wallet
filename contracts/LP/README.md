@@ -8,56 +8,94 @@ The L1 liquidity pool is the sub pool. Swap users can do fast onramp. When swap 
 
 > For OMGX, there is no delays for users to move funds from L1 to L2. From my understanding, the liquidity pool is only used to help users fastly exist L2.
 
-Each token in L2 liquidity pool has the pool data.
+## Calculation
 
-```
-struct PoolInfo {
-	address l1TokenAddress; // Address of token contract.
-	address l2TokenAddress; // Address of toekn contract.
-	uint256 L1Balance; // L1 token balance.
-	uint256 accUserReward; // Accumulated user reward.
-  uint256 accOwnerReward; // Accumulated owner reward.
-}
-```
+* A deposit 100
 
-## Liquidity Provider
+  **A info**
 
-* Deposit tokens
+  | Deposit Amount | Reward Debet | Pending Reward |
+  | -------------- | ------------ | -------------- |
+  | 100            | 0            | 0              |
 
-  > Providers can only deposit and withdraw tokens on L2, so they can save gas.
+  **Pool info**
 
-  When the provider deposits tokens, half of tokens will be moved to L1. It helps us balance the token amounts in L1 and L2.
+  | Total Rewards | Reward Per Share | Total Deposit Amount |
+  | ------------- | ---------------- | -------------------- |
+  | 0             | 0                | 100                  |
 
-  Each liquidity provider has the user info data.
+* The pool generates 10 rewards
+
+  **Pool info**
+
+  | Total Rewards | Reward Per Share | Total Deposit Amount |
+  | ------------- | ---------------- | -------------------- |
+  | 0             | 0                | 100                  |
+
+* B deposit 100
+
+  We need to update the rewardPerShare first (don't consider the new deposit amount first!)
+
+  **Pool info**
+
+  | Total Rewards | Reward Per Share | Total Deposit Amount |
+  | ------------- | ---------------- | -------------------- |
+  | 10            | 10 / 100         | 100                  |
+
+  Calculate the B info
+
+  **B info**
+
+  | Deposit Amount | Reward Debet                                        | Pending Reward |
+  | -------------- | --------------------------------------------------- | -------------- |
+  | 100            | rewardPerShare * depositAmount = 100 * 10/ 100 = 10 | 0              |
+
+  The total deposit amount of the pool is 200 now.
+
+  **pool info**
+
+  | Total Rewards | Reward Per Share | Total Deposit Amount |
+  | ------------- | ---------------- | -------------------- |
+  | 10            | 10 / 100         | 200                  |
+
+* The pool generates another 5 rewards
+
+  **Pool info**
+
+  | Total Rewards | Reward Per Share | Total Deposit Amount |
+  | ------------- | ---------------- | -------------------- |
+  | 15            | 10/100           | 100                  |
+
+* If A withdraw 100 tokens
+
+  We need to update the rewardPerShare first.
+
+  **Pool info**
+
+  | Total Rewards | Reward Per Share                                             | Total Deposit Amount |
+  | ------------- | ------------------------------------------------------------ | -------------------- |
+  | 15            | 10 / 100 + (increased_rewards) / total_deposit_amount = 10 / 100 + 5 / 200 | 200                  |
+
+  The rewards for A is 
 
   ```
-  struct UserInfo {
-  	uint256 amount;
-  	uint256 rewardDebt;
-  }
+  deposit_amount * reward_per_share - reward_debet = 100 * (10 / 100 + 5 / 200 ) - 0 = 12.5
   ```
 
-  The `amount` presents the total amount that the provider deposits. When the provider deposits the tokens for the first time, we calculate the initial `rewardDebt`:
+* If B withdraw 100 tokens
+
+  We need to update the rewardPerShare first.
+
+  **Pool info**
+
+  | Total Rewards | Reward Per Share                                             | Total Deposit Amount |
+  | ------------- | ------------------------------------------------------------ | -------------------- |
+  | 15            | 10 / 100 + (increased_rewards) / total_deposit_amount = 10 / 100 + 5 / 200 | 200                  |
+
+  The rewards for B is
 
   ```
-  totalProviderDeposit = (L1Balance + L2Balance) - (pool.accUserReward + pool.accOwnerReward)
-  userRewardPerShare = pool.accUserReward / totalProviderDeposit
-  rewardDebt = userRewardPerShare * amount
+  deposit_amount * reward_per_share - reward_debet = 100 * (10 / 100 + 5 / 200 ) - 10 = 2.5
   ```
 
-  If the provider deposits more tokens, then we transfer the rewards to them first.
-
-* Withdraw tokens
-
-  When the provider withdraws some or all of tokens, we send the all rewards to them.
-
-  > If L2 doesn't have enough tokens, we need to transfer tokens from L1 to L2.
-
-## Swap User
-
-Regardless of whether users deposit tokens on L1 or L2, we always calculate the fees on L2. 
-
-## Contract Owner
-
-The contract owner can withdraw `PoolInfo.accOwnerReward`.
-
+  
