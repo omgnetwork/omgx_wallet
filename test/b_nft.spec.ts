@@ -4,9 +4,9 @@ chai.use(chaiAsPromised)
 const expect = chai.expect;
 
 import { Contract, ContractFactory, BigNumber, Wallet, utils, providers } from 'ethers'
-import { Direction } from '../test/shared/watcher-utils'
+import { Direction } from './shared/watcher-utils'
 import L2ERC721Json from '../artifacts-ovm/contracts/ERC721Mock.sol/ERC721Mock.json'
-import { OptimismEnv } from '../test/shared/env'
+import { OptimismEnv } from './shared/env'
 
 import * as fs from 'fs'
 
@@ -117,7 +117,7 @@ describe('NFT Test', async () => {
     //mint one NFT
     let nft = await L2ERC721.mintNFT(recipient,meta)
     await nft.wait()
-    //console.log("ERC721:",nft)
+    // console.log("ERC721:",nft)
 
     const balanceOwner = await L2ERC721.balanceOf(owner)
     const balanceRecipient = await L2ERC721.balanceOf(recipient)

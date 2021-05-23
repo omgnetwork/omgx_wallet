@@ -64,7 +64,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         uint256 L1Balance; // L1 token balance.
 
         // user rewards
-        uint256 lastUserRewardBlock; // Last block number that SUSHIs distribution occurs.
+        // uint256 lastUserRewardBlock; // Last block number that SUSHIs distribution occurs.
         uint256 lastAccUserReward; // Last accumulated user reward
         uint256 accUserReward; // Accumulated user reward.
         uint256 accUserRewardPerShare; // Accumulated user rewards per share, times 1e12. See below.
@@ -213,7 +213,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
                 l2TokenAddress: _l2TokenAddress,
                 userDepositAmount: 0,
                 L1Balance: 0,
-                lastUserRewardBlock: block.number,
+                // lastUserRewardBlock: block.number,
                 lastAccUserReward: 0,
                 accUserReward: 0,
                 accUserRewardPerShare: 0,
@@ -327,14 +327,16 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         public
     {
         PoolInfo storage pool = poolInfo[_tokenAddress];
-        if (pool.lastUserRewardBlock < block.number &&  pool.lastAccUserReward < pool.accUserReward) {
+        // block.number is not working
+        // if (pool.lastUserRewardBlock < block.number &&  pool.lastAccUserReward < pool.accUserReward) {
+        if (pool.lastAccUserReward < pool.accUserReward) {
             uint256 accUserRewardDiff = (pool.accUserReward.sub(pool.lastAccUserReward));
             if (pool.userDepositAmount != 0) {
                 pool.accUserRewardPerShare = pool.accUserRewardPerShare.add(
                     accUserRewardDiff.mul(1e12).div(pool.userDepositAmount)
                 );
             }
-            pool.lastUserRewardBlock = block.number;
+            // pool.lastUserRewardBlock = block.number;
             pool.lastAccUserReward = pool.accUserReward;
         }
     }
@@ -482,7 +484,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         pool.userDepositAmount = pool.userDepositAmount.sub(_amount);
         
         require(IERC20(_tokenAddress).balanceOf(address(this)) >= _amount, "Not enough liquidity on the pool to withdraw");
-        IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
+        IERC20(_tokenAddress).safeTransfer(_to, _amount);
 
         emit withdrawLiqudiity_EVENT(
             msg.sender,
@@ -512,7 +514,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         require(pool.accOwnerReward >= _amount, "Owner Reward Withdraw Error");
         require(IERC20(_tokenAddress).balanceOf(address(this)) >= _amount, "Not enough liquidity on the pool to withdraw");
 
-        IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
+        IERC20(_tokenAddress).safeTransfer(_to, _amount);
 
         pool.accOwnerReward = pool.accOwnerReward.sub(_amount);
 
@@ -553,7 +555,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         user.pendingReward = pendingReward.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accUserRewardPerShare).div(1e12);
 
-        IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
+        IERC20(_tokenAddress).safeTransfer(_to, _amount);
 
         emit withdrawReward_EVENT(
             msg.sender,
@@ -593,7 +595,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
 
         require(receivedAmount <= pool.L1Balance, "L1 Insufficient Fund");
 
-        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), receivedAmount);
+        IERC20(_tokenAddress).safeTransfer(_to, receivedAmount);
 
         pool.accUserReward = pool.accUserReward.add(userRewardFee);
         pool.accOwnerReward = pool.accOwnerReward.add(ownerRewardFee);

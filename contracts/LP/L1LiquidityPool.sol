@@ -10,8 +10,6 @@ import "omgx_contracts/build/contracts/libraries/bridge/OVM_CrossDomainEnabled.s
 
 /* External Imports */
 import '@openzeppelin/contracts/math/SafeMath.sol';
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
@@ -142,6 +140,8 @@ contract L1LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     {   
         require(l2ContractAddress[_tokenAddress] != address(0), "Token L2 address not registered");
 
+        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount));
+
         // Construct calldata for L2LiquidityPool.depositToFinalize(_to, _receivedAmount)
         bytes memory data = abi.encodeWithSelector(
             iL2LiquidityPool.clientPayL2.selector,
@@ -185,7 +185,7 @@ contract L1LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         onlyFromCrossDomainAccount(address(l2LiquidityPoolAddress))
     {   
         if (_tokenAddress != address(0)) {
-            IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
+            IERC20(_tokenAddress).safeTransfer(_to, _amount);
         } else {
             //this is ETH
             // balances[address(0)] = balances[address(0)].sub(_amount);
