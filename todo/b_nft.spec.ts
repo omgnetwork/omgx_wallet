@@ -4,9 +4,9 @@ chai.use(chaiAsPromised)
 const expect = chai.expect;
 
 import { Contract, ContractFactory, BigNumber, Wallet, utils, providers } from 'ethers'
-import { Direction } from './shared/watcher-utils'
+import { Direction } from '../test/shared/watcher-utils'
 import L2ERC721Json from '../artifacts-ovm/contracts/ERC721Mock.sol/ERC721Mock.json'
-import { OptimismEnv } from './shared/env'
+import { OptimismEnv } from '../test/shared/env'
 
 import * as fs from 'fs'
 

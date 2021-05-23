@@ -17,6 +17,6 @@
       "es7"
     ],
   },
-    "include": ["./test"],
+    "include": ["./test", "todo/b_nft.spec.ts", "todo/a_setup.spec.ts"],
   	"files": ["./hardhat.config.ts"]
 }

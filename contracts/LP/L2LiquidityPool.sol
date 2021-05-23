@@ -87,19 +87,6 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     uint256 userRewardFeeRate;
     uint256 ownerRewardFeeRate;
 
-    /********************************
-     * Constructor & Initialization *
-     ********************************/
-
-    /**
-     * @param _l2CrossDomainMessenger L1 Messenger address being used for cross-chain communications.
-     */
-    constructor (
-        address _l2CrossDomainMessenger
-    )
-        OVM_CrossDomainEnabled(_l2CrossDomainMessenger)
-    {}
-
     /********************
      *       Event      *
      ********************/
@@ -113,8 +100,8 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     event ownerRecoverFee_EVENT(
         address sender,
         address receiver,
-        address tokenAddress,
-        uint256 amount
+        uint256 amount,
+        address tokenAddress
     );
 
     event clientDepositL2_EVENT(
@@ -141,6 +128,26 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         uint256 amount,
         address tokenAddress
     );
+
+    event withdrawReward_EVENT(
+        address sender,
+        address receiver,
+        uint256 amount,
+        address tokenAddress
+    );
+
+    /********************************
+     * Constructor & Initialization *
+     ********************************/
+
+    /**
+     * @param _l2CrossDomainMessenger L1 Messenger address being used for cross-chain communications.
+     */
+    constructor (
+        address _l2CrossDomainMessenger
+    )
+        OVM_CrossDomainEnabled(_l2CrossDomainMessenger)
+    {}
 
     /**********************
      * Function Modifiers *
@@ -268,21 +275,30 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     }
 
     /**
-     * Checks the user fee balance of an address.
+     * Checks the user balance of an address.
      * @param _tokenAddress Address of ERC20.
-     * @return Balance of the address.
      */
-    function userFeeBalanceOf(
+    function userBalanceOf(
         address _tokenAddress
     )
         external
         view
         returns (
+            uint256,
             uint256
         )
     {   
-        PoolInfo memory pool = poolInfo[_tokenAddress];
-        return pool.accUserReward;
+        PoolInfo storage pool = poolInfo[_tokenAddress];
+        UserInfo storage user = userInfo[_tokenAddress][msg.sender];
+
+        uint256 pendingReward = user.pendingReward.add(
+            user.amount.mul(pool.accUserRewardPerShare).div(1e12).sub(user.rewardDebt)
+        );
+
+        return (
+            user.amount,
+            pendingReward
+        );
     }
 
     /**
@@ -358,7 +374,12 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         // Transfer 1/2 funds to L1
         uint256 transferAmount = _amount.mul(1).div(2);
         // needs to allow L2 pool to transfer funds immediately
-        OVM_L2DepositedERC20(_tokenAddress).withdraw(transferAmount);
+        // NOTE: withdraw has 7 days delay, so we need to have other 
+        // method to transfer funds from L2 to L1
+        OVM_L2DepositedERC20(_tokenAddress).withdrawTo(
+            L1LiquidityPoolAddress, 
+            transferAmount
+        );
         
         // update amounts
         user.amount = user.amount.add(_amount);
@@ -460,7 +481,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         // update total user deposit amount
         pool.userDepositAmount = pool.userDepositAmount.sub(_amount);
         
-        require(_amount <= IERC20(_tokenAddress).balanceOf(address(this)), "Not enough liquidity on the pool to withdraw");
+        require(IERC20(_tokenAddress).balanceOf(address(this)) >= _amount, "Not enough liquidity on the pool to withdraw");
         IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
 
         emit withdrawLiqudiity_EVENT(
@@ -487,6 +508,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     {
         PoolInfo storage pool = poolInfo[_tokenAddress];
 
+        require(pool.l2TokenAddress != address(0), "Token Address Not Register");
         require(pool.accOwnerReward >= _amount, "Owner Reward Withdraw Error");
         require(IERC20(_tokenAddress).balanceOf(address(this)) >= _amount, "Not enough liquidity on the pool to withdraw");
 
@@ -497,8 +519,47 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         emit ownerRecoverFee_EVENT(
             msg.sender,
             _to,
-            _tokenAddress,
-            _amount
+            _amount,
+            _tokenAddress
+        );
+    }
+
+    /**
+     * withdraw reward from ERC20
+     * @param _amount Amount to transfer to the other account.
+     * @param _tokenAddress ERC20 token address.
+     * @param _to receiver to get the fee.
+     */
+    function withdrawReward(
+        uint256 _amount,
+        address _tokenAddress,
+        address _to
+    )
+        external
+        onlyOwner()
+    {
+        PoolInfo storage pool = poolInfo[_tokenAddress];
+        UserInfo storage user = userInfo[_tokenAddress][msg.sender];
+
+        require(pool.l2TokenAddress != address(0), "Token Address Not Register");
+
+        uint256 pendingReward = user.pendingReward.add(
+            user.amount.mul(pool.accUserRewardPerShare).div(1e12).sub(user.rewardDebt)
+        );
+
+        require(pendingReward >= _amount, "Withdraw Reward Error");
+        require(IERC20(_tokenAddress).balanceOf(address(this)) >= _amount, "Not enough liquidity on the pool to withdraw");
+
+        user.pendingReward = pendingReward.sub(_amount);
+        user.rewardDebt = user.amount.mul(pool.accUserRewardPerShare).div(1e12);
+
+        IERC20(_tokenAddress).safeTransferFrom(address(this), _to, _amount);
+
+        emit withdrawReward_EVENT(
+            msg.sender,
+            _to,
+            _amount,
+            _tokenAddress
         );
     }
 

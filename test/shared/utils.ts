@@ -21,9 +21,13 @@ export const l2Provider = new providers.JsonRpcProvider(process.env.L2_NODE_WEB3
 export const bobl1Wallet = new Wallet(process.env.TEST_PRIVATE_KEY_1,l1Provider)
 export const bobl2Wallet = bobl1Wallet.connect(l2Provider)
 
-// Another test user with some eth
+// The second test user with some eth
 export const alicel1Wallet = new Wallet(process.env.TEST_PRIVATE_KEY_2).connect(l1Provider)
 export const alicel2Wallet = new Wallet(process.env.TEST_PRIVATE_KEY_2).connect(l2Provider)
+
+// The third test user with some eth
+export const katel1Wallet = new Wallet(process.env.TEST_PRIVATE_KEY_3).connect(l1Provider)
+export const katel2Wallet = new Wallet(process.env.TEST_PRIVATE_KEY_3).connect(l2Provider)
 
 // Predeploys
 export const PROXY_SEQUENCER_ENTRYPOINT_ADDRESS = '0x4200000000000000000000000000000000000004'

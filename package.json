@@ -24,11 +24,11 @@
     "chai": "^4.3.3",
     "chai-as-promised": "^7.1.1",
     "directory-tree": "^2.2.7",
-    "omgx_core-utils": "git+https://github.com/omgnetwork/omgx_core-utils",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.0.32",
     "hardhat": "^2.1.2",
     "mocha": "^8.3.1",
+    "omgx_core-utils": "git+https://github.com/omgnetwork/omgx_core-utils",
     "rimraf": "^3.0.2",
     "shx": "^0.3.3",
     "ts-node": "^9.1.1",
@@ -37,8 +37,8 @@
   "dependencies": {
     "@openzeppelin/contracts": "3.4.1",
     "dotenv": "^8.2.0",
-    "omgx_contracts": "git+https://github.com/omgnetwork/omgx_contracts",
     "glob": "^7.1.6",
+    "omgx_contracts": "git+https://github.com/omgnetwork/omgx_contracts",
     "patch-package": "^6.4.7"
   }
 }

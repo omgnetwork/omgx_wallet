@@ -4,14 +4,19 @@ import { Watcher } from './watcher'
 
 import {
   getAddressManager,
+  
   l1Provider,
   l2Provider,
+  
   bobl1Wallet,
   bobl2Wallet,
-  getL2ETHGateway,
-  getL1ETHGateway,
   alicel1Wallet,
   alicel2Wallet,
+  katel1Wallet,
+  katel2Wallet,
+
+  getL2ETHGateway,
+  getL1ETHGateway,
 } from './utils'
 
 import {
@@ -47,8 +52,11 @@ export class OptimismEnv {
   bobl1Wallet: Wallet
   bobl2Wallet: Wallet
   
-  alicel2Wallet: Wallet
   alicel1Wallet: Wallet
+  alicel2Wallet: Wallet
+
+  katel1Wallet: Wallet
+  katel2Wallet: Wallet
 
   constructor(args: any) {
     this.addressManager = args.addressManager
@@ -62,6 +70,8 @@ export class OptimismEnv {
     this.bobl2Wallet = args.bobl2Wallet
     this.alicel1Wallet = args.alicel1Wallet
     this.alicel2Wallet = args.alicel2Wallet
+    this.katel1Wallet = args.katel1Wallet
+    this.katel2Wallet = args.katel2Wallet
     this.l2Provider = args.l2Provider
     this.ctc = args.ctc
   }
@@ -99,11 +109,16 @@ export class OptimismEnv {
       l1MessengerAddress,
       L2ETHGateway,
       l2Messenger,
+      
       watcher,
+      
       bobl1Wallet,
       bobl2Wallet,
       alicel1Wallet,
       alicel2Wallet,
+      katel1Wallet,
+      katel2Wallet,
+
       l2Provider
     })
   }

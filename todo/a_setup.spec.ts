@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { Contract, ContractFactory, BigNumber, Wallet, utils, providers } from 'ethers'
-import { Direction } from './shared/watcher-utils'
+import { Direction } from '../test/shared/watcher-utils'
 
 import L1ERC20Json from '../artifacts/contracts/ERC20.sol/ERC20.json'
 import L1ERC20GatewayJson from '../artifacts/contracts/L1ERC20Gateway.sol/L1ERC20Gateway.json'
@@ -13,7 +13,7 @@ import L2TokenPoolJson from '../artifacts-ovm/contracts/TokenPool.sol/TokenPool.
 
 import AtomicSwapJson from '../artifacts-ovm/contracts/AtomicSwap.sol/AtomicSwap.json';
 
-import { OptimismEnv } from './shared/env'
+import { OptimismEnv } from '../test/shared/env'
 
 import * as fs from 'fs'
 
