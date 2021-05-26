@@ -42,44 +42,9 @@ describe('System setup', async () => {
 
   //Test ERC20 
   const initialAmount = utils.parseEther("10000000000")
-  const tokenName = 'OMGXTest'
+  const tokenName = 'JLKN'
   const tokenDecimals = 18
-  const tokenSymbol = 'OMGX'
-
-  const getBalances = async (
-    _address: string, 
-    _L1LiquidityPool=L1LiquidityPool, 
-    _L2LiquidityPool=L2LiquidityPool, 
-    _env=env
-   ) => {
-
-    const L1LPFeeBalance = await _L1LiquidityPool.feeBalanceOf(_address)
-    const L2LPFeeBalance = await _L2LiquidityPool.feeBalanceOf(_address)
-
-    const aliceL1Balance = await _env.alicel1Wallet.getBalance()
-    const aliceL2Balance = await _env.alicel2Wallet.getBalance()
-
-    const bobL1Balance = await _env.bobl1Wallet.getBalance()
-    const bobL2Balance = await _env.bobl2Wallet.getBalance()
-/*
-    console.log("\nbobL1Balance:", bobL1Balance.toString())
-    console.log("bobL2Balance:", bobL2Balance.toString())
-    console.log("aliceL1Balance:", aliceL1Balance.toString())
-    console.log("aliceL2Balance:", aliceL2Balance.toString())
-    console.log("L1LPBalance:", L1LPBalance.toString())
-    console.log("L2LPBalance:", L2LPBalance.toString())
-    console.log("L1LPFeeBalance:", L1LPFeeBalance.toString())
-    console.log("L2LPFeeBalance:", L2LPFeeBalance.toString())
-*/
-    return {
-      L1LPFeeBalance,
-      L2LPFeeBalance,
-      aliceL1Balance,
-      aliceL2Balance,
-      bobL1Balance,
-      bobL2Balance,
-    }
-  }
+  const tokenSymbol = 'JLKN'
 
   /************* BOB owns all the pools, and ALICE mints a new token ***********/
   before(async () => {
@@ -198,7 +163,10 @@ describe('System setup', async () => {
     L2TokenPool = await Factory__L2TokenPool.deploy()
     await L2TokenPool.deployTransaction.wait()
     console.log("L2TokenPool deployed to:", L2TokenPool.address)
-    
+
+    //Register ERC20 token address in L2 token pool
+    await L2TokenPool.registerTokenAddress(L2DepositedERC20.address);
+
     // Deploy atomic swap
     AtomicSwap = await Factory__AtomicSwap.deploy()
     await AtomicSwap.deployTransaction.wait()
@@ -236,7 +204,7 @@ describe('System setup', async () => {
   })
 
   it('should deposit ERC20 token to L2', async () => {
-    const depositL2ERC20Amount = utils.parseEther("1000");
+    const depositL2ERC20Amount = utils.parseEther("10000");
     
     const preL1ERC20Balance = await L1ERC20.balanceOf(env.bobl1Wallet.address)
     const preL2ERC20Balance = await L2DepositedERC20.balanceOf(env.bobl2Wallet.address)
@@ -265,7 +233,6 @@ describe('System setup', async () => {
   })
 
   it('should transfer ERC20 token to Alice and Kate', async () => {
-
     const transferL2ERC20Amount = utils.parseEther("150")
 
     const preBobL2ERC20Balance = await L2DepositedERC20.balanceOf(env.bobl2Wallet.address)
@@ -295,18 +262,49 @@ describe('System setup', async () => {
     )
   })
 
+  it('should add ERC20 token to token pool', async () => {
+    const addL2TPAmount = utils.parseEther("1000")
+
+    const approveL2TPTX = await L2DepositedERC20.approve(
+      L2TokenPool.address,
+      addL2TPAmount,
+    )
+    await approveL2TPTX.wait()
+
+    const transferL2TPTX = await L2DepositedERC20.transfer(
+      L2TokenPool.address,
+      addL2TPAmount,
+    );
+    await transferL2TPTX.wait()
+
+    const L2TPBalance = await L2DepositedERC20.balanceOf(L2TokenPool.address)
+
+    expect(L2TPBalance).to.deep.eq(addL2TPAmount)
+  })
+
   it('should register the pool', async () => {
     
-    const registerPoolTX = await L2LiquidityPool.registerPool(
+    const registerPoolERC20TX = await L2LiquidityPool.registerPool(
       L1ERC20.address,
       L2DepositedERC20.address,  
     )
-    await registerPoolTX.wait()
+    await registerPoolERC20TX.wait()
 
-    const poolInfo = await L2LiquidityPool.poolInfo(L2DepositedERC20.address)
+    const poolERC20Info = await L2LiquidityPool.poolInfo(L2DepositedERC20.address)
 
-    expect(poolInfo.l1TokenAddress).to.deep.eq(L1ERC20.address)
-    expect(poolInfo.l2TokenAddress).to.deep.eq(L2DepositedERC20.address)
+    expect(poolERC20Info.l1TokenAddress).to.deep.eq(L1ERC20.address)
+    expect(poolERC20Info.l2TokenAddress).to.deep.eq(L2DepositedERC20.address)
+
+    const registerPoolETHTX = await L2LiquidityPool.registerPool(
+      "0x0000000000000000000000000000000000000000",
+      env.L2ETHGateway.address,  
+    )
+    await registerPoolETHTX.wait()
+
+    const poolETHInfo = await L2LiquidityPool.poolInfo(env.L2ETHGateway.address)
+
+    expect(poolETHInfo.l1TokenAddress).to.deep.eq("0x0000000000000000000000000000000000000000")
+    expect(poolETHInfo.l2TokenAddress).to.deep.eq(env.L2ETHGateway.address)
   })  
 
   it('shouldn\'t update the pool', async () => {
@@ -465,7 +463,7 @@ describe('System setup', async () => {
   it("should withdraw reward", async () => {
     const preL2ERC20Balance = await L2DepositedERC20.balanceOf(env.bobl2Wallet.address)
     const preBobUserInfo = await L2LiquidityPool.userInfo(L2DepositedERC20.address, env.bobl2Wallet.address)
-    const pendingReward = preBobUserInfo.pendingReward
+    const pendingReward = BigNumber.from(preBobUserInfo.pendingReward).div(2)
 
     const withdrawRewardTX = await L2LiquidityPool.withdrawReward(
       pendingReward,

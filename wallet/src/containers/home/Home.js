@@ -44,6 +44,8 @@ import ExitModal from 'containers/modals/exit/ExitModal';
 import LedgerConnect from 'containers/modals/ledger/LedgerConnect';
 import AddTokenModal from 'containers/modals/addtoken/AddTokenModal';
 import ConfirmationModal from 'containers/modals/confirmation/ConfirmationModal';
+import FarmDepositModal from 'containers/modals/farm/FarmDepositModal';
+import FarmWithdrawModal from 'containers/modals/farm/FarmWithdrawModal';
 
 //Wallet Functions
 import Status from 'containers/status/Status';
@@ -59,6 +61,9 @@ import MobileMenu from 'components/mobilemenu/MobileMenu';
 import Login from 'containers/login/Login';
 import Seller from 'containers/seller/Seller';
 import Buyer from 'containers/buyer/Buyer';
+
+// Farm
+import Farm from 'containers/farm/Farm';
 
 import networkService from 'services/networkService';
 
@@ -84,6 +89,8 @@ function Home () {
   const addTokenModalState = useSelector(selectModalState('addNewTokenModal'))
   const ledgerConnectModalState = useSelector(selectModalState('ledgerConnectModal'))
   const confirmationModalState = useSelector(selectModalState('confirmationModal'))
+  const farmDepositModalState = useSelector(selectModalState('farmDepositModal'))
+  const farmWithdrawModalState = useSelector(selectModalState('farmWithdrawModal'))
 
   const walletMethod = useSelector(selectWalletMethod())
   const loggedIn = useSelector(selectLogin());
@@ -136,10 +143,14 @@ function Home () {
   
   const handleSetPage = async (page) => {
     if (page === 'VarnaLogin') {
-      const networkStatus = networkService.L1orL2 === 'L2';
-      if (!networkStatus) {
+      if (!(networkService.L1orL2 === 'L2')) {
         dispatch(openError('Wrong network! Please switch to L2 network to use Varna.'));
         return
+      }
+    }
+    if (page === 'Farm') {
+      if (!(networkService.L1orL2 === 'L2')) {
+        dispatch(openError('Wrong network! Please switch to L2 network to use Farm.'));
       }
     }
     setPageDisplay(page);
@@ -153,6 +164,8 @@ function Home () {
       <ExitModal open={exitModalState} fast={fast}/>
       <AddTokenModal open={addTokenModalState} />
       <ConfirmationModal open={confirmationModalState} />
+      <FarmDepositModal open={farmDepositModalState} />
+      <FarmWithdrawModal open={farmWithdrawModalState} />
 
       <LedgerConnect
         open={walletMethod === 'browser'
@@ -183,6 +196,12 @@ function Home () {
               onClick={()=>{handleSetPage("AccountNow")}}
             >  
               Wallet
+            </h2>
+            <h2
+              className={pageDisplay === "Farm" ? styles.subtitletextActive : styles.subtitletext}
+              onClick={()=>{handleSetPage("Farm")}}
+            >  
+              Farm
             </h2>
             <h2
               className={pageDisplay === "NFT" ? styles.subtitletextActive : styles.subtitletext}
@@ -231,6 +250,9 @@ function Home () {
           }
           {pageDisplay === "VarnaBuy" &&
             <Buyer/>
+          }
+          {pageDisplay === "Farm" &&
+            <Farm/>
           }
         </div>
       </div>

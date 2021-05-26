@@ -68,7 +68,7 @@ function InputStep ({
     networkService.L2LPBalance(currency).then((LPBalance)=>{
       setLPBalance(LPBalance)
     })
-    networkService.getL1LPFeeRatio().then((feeRate)=>{
+    networkService.getTotalFeeRate().then((feeRate)=>{
       setFeeRate(feeRate)
     })
   }

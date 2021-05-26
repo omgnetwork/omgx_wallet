@@ -36,6 +36,7 @@ import loginReducer from './loginReducer';
 import swapReducer from './swapReducer';
 import priceTickerReducer from './priceTickerReducer';
 import notificationReducer from './notificationReducer';
+import farmReduer from './farmReducer';
 
 const rootReducer = combineReducers({
   loading: loadingReducer,
@@ -59,6 +60,7 @@ const rootReducer = combineReducers({
   swap: swapReducer,
   priceTicker: priceTickerReducer,
   notification: notificationReducer,
+  farm: farmReduer,
 });
 
 export default rootReducer;

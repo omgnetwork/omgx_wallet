@@ -71,6 +71,7 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
 
         // owner rewards
         uint256 accOwnerReward; // Accumulated owner reward.
+        uint256 latestUserRewardPerShare;
     }
 
     /*************
@@ -83,9 +84,10 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
     mapping(address => mapping(address => UserInfo)) public userInfo;
 
     address L1LiquidityPoolAddress;
-    uint256 totalFeeRate;
-    uint256 userRewardFeeRate;
-    uint256 ownerRewardFeeRate;
+    address masterChefAddress;
+    uint256 public totalFeeRate;
+    uint256 public userRewardFeeRate;
+    uint256 public ownerRewardFeeRate;
 
     /********************
      *       Event      *
@@ -213,11 +215,11 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
                 l2TokenAddress: _l2TokenAddress,
                 userDepositAmount: 0,
                 L1Balance: 0,
-                // lastUserRewardBlock: block.number,
                 lastAccUserReward: 0,
                 accUserReward: 0,
                 accUserRewardPerShare: 0,
-                accOwnerReward: 0
+                accOwnerReward: 0,
+                latestUserRewardPerShare: 0
             });
     } 
 
@@ -235,43 +237,6 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         )
     {
         return DEFAULT_FINALIZE_DEPOSIT_L2_GAS;
-    }
-
-    /**
-     * Get the fee rate
-     */
-    function getFeeRate()
-        external
-        view
-        returns(
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            totalFeeRate,
-            userRewardFeeRate,
-            ownerRewardFeeRate
-        );
-    }
-
-    /**
-     * Checks the owner fee balance of an address.
-     * @param _tokenAddress Address of ERC20.
-     * @return Balance of the address.
-     */
-    function ownerFeeBalanceOf(
-        address _tokenAddress
-    )
-        external
-        view
-        returns (
-            uint256
-        )
-    {   
-        PoolInfo memory pool = poolInfo[_tokenAddress];
-        return pool.accOwnerReward;
     }
 
     /**
@@ -332,9 +297,9 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
         if (pool.lastAccUserReward < pool.accUserReward) {
             uint256 accUserRewardDiff = (pool.accUserReward.sub(pool.lastAccUserReward));
             if (pool.userDepositAmount != 0) {
-                pool.accUserRewardPerShare = pool.accUserRewardPerShare.add(
-                    accUserRewardDiff.mul(1e12).div(pool.userDepositAmount)
-                );
+                uint256 updatedUserRewardPerShare = accUserRewardDiff.mul(1e12).div(pool.userDepositAmount);
+                pool.accUserRewardPerShare = pool.accUserRewardPerShare.add(updatedUserRewardPerShare);
+                pool.latestUserRewardPerShare = updatedUserRewardPerShare;
             }
             // pool.lastUserRewardBlock = block.number;
             pool.lastAccUserReward = pool.accUserReward;
@@ -373,20 +338,30 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
 
         // transfer funds
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
+
         // Transfer 1/2 funds to L1
-        uint256 transferAmount = _amount.mul(1).div(2);
+        uint256 transferAmount = _amount.div(2);
+        // ETH is wrong ??? not idea
         // needs to allow L2 pool to transfer funds immediately
         // NOTE: withdraw has 7 days delay, so we need to have other 
         // method to transfer funds from L2 to L1
-        OVM_L2DepositedERC20(_tokenAddress).withdrawTo(
-            L1LiquidityPoolAddress, 
-            transferAmount
-        );
+        if (pool.l1TokenAddress == address(0) ) {
+            OVM_L2DepositedERC20(_tokenAddress).withdrawTo(
+                L1LiquidityPoolAddress, 
+                _amount
+            );
+            pool.L1Balance = pool.L1Balance.add(_amount);
+        } else {
+            OVM_L2DepositedERC20(_tokenAddress).withdrawTo(
+                L1LiquidityPoolAddress, 
+                transferAmount
+            );
+            pool.L1Balance = pool.L1Balance.add(transferAmount);
+        }
         
         // update amounts
         user.amount = user.amount.add(_amount);
         pool.userDepositAmount = pool.userDepositAmount.add(_amount);
-        pool.L1Balance = pool.L1Balance.add(transferAmount);
 
         emit addLiquidity_EVENT(
             msg.sender,

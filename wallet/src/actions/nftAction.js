@@ -15,7 +15,7 @@ limitations under the License. */
 
 import store from 'store';
 
-export async function getNFTs () {
+export function getNFTs () {
   const state = store.getState()
   return state.nftList;
 }

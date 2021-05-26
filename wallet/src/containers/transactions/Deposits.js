@@ -48,8 +48,9 @@ function Deposits ({ searchHistory, transactions }) {
 
   const _deposits = transactions.filter(i => {
     return i.hash.includes(searchHistory) && (
+      i.to !== null && (
       i.to.toLowerCase() === networkService.L1LPAddress.toLowerCase() || 
-      i.to.toLowerCase() === networkService.l1ETHGatewayAddress.toLowerCase());
+      i.to.toLowerCase() === networkService.l1ETHGatewayAddress.toLowerCase()));
   });
 
   const startingIndex = page === 1 ? 0 : ((page - 1) * PER_PAGE);

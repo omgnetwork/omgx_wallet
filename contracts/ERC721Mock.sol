@@ -20,7 +20,7 @@ contract ERC721Mock is Ownable, ERC721 {
 
     function mintNFT(address recipient, string memory tokenURI) public onlyOwner returns (uint256)
     {
-        safeMint(recipient, tID);
+        mint(recipient, tID);
         setTokenURI(tID, tokenURI);
         tID += 1;
         return tID;
