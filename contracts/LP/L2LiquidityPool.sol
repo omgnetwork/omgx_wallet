@@ -341,7 +341,8 @@ contract L2LiquidityPool is OVM_CrossDomainEnabled, Ownable {
 
         // Transfer 1/2 funds to L1
         uint256 transferAmount = _amount.div(2);
-        // ETH is wrong ??? not idea
+        // ETH is wrong ??? no idea
+        // withdraw oWETH wrong
         // needs to allow L2 pool to transfer funds immediately
         // NOTE: withdraw has 7 days delay, so we need to have other 
         // method to transfer funds from L2 to L1
